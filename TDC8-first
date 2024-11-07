@@ -1,0 +1,361 @@
+import pandas as pd
+
+# Dosya yolunu tanımlayalım
+file_path = "/Users/lemannur/Downloads/Aggregated_log2Exp_TCD8.xlsx"
+
+# Excel dosyasını pandas ile yükleyelim
+df_TCD8 = pd.read_excel(file_path)
+
+# Yüklenen verinin ilk birkaç satırını görüntüleyelim
+print(df_TCD8.head())
+# Library isimlerini listede alalım
+library_columns = sorted_df['library'].tolist()
+# Library isimlerindeki '_T' kısmını '-T' olarak değiştirelim
+library_columns = [col.replace('_T', '-T') for col in library_columns]
+
+# Düzeltilmiş library_columns listesini görelim
+print(library_columns)
+
+# 'genes' sütununu ve seçili library sütunlarını içeren yeni bir dataframe oluşturalım
+selected_columns = ['genes'] + library_columns
+filtered_gene_expression_df = df_TCD8[selected_columns]
+print(filtered_gene_expression_df.columns)
+
+
+# TL ve TR cluster tiplerine sahip library isimleri
+group1 = [
+    'C136-T', 'C107-T', 'C172-T', 'C159-T', 'C169-T', 'C168-T', 'C167-T',
+    'C106-T', 'C132-T', 'C123-T', 'C115-T', 'C163-T', 'C173-T'
+]
+
+# BL ve BR cluster tiplerine sahip library isimleri
+group2 = [
+    'C112-T', 'C126-T', 'C111-T', 'C158-T', 'C165-T'
+]
+
+# Grupları görüntüleyelim
+print("Group 1 (TL ve TR):", group1)
+print("Group 2 (BL ve BR):", group2)
+
+
+# Sadece group1'e ait sütunları ve 'genes' sütununu seçelim
+selected_df_group_1 = filtered_gene_expression_df[['genes'] + group1]
+
+filtered_df_group_1 = selected_df_group_1[(selected_df_group_1[group1] > 0.1).all(axis=1)]
+
+# Ortak genleri bulalım
+common_genes_group_1 = filtered_df_group_1['genes'].tolist()
+
+# Ortak genleri yazdıralım
+print("Ortak genler:")
+print(common_genes_group_1)
+
+# Yeni bir dataframe oluştur, sadece bu genler ve group1'e ait sütunları içersin
+final_df_group_1 = filtered_df_group_1[['genes'] + group1]
+
+# Yeni dataframe'i gösterelim
+print("Final DataFrame:")
+print(final_df_group_1)
+
+# Dosyayı masaüstüne kaydetmek için doğru yolu sağlayın (macOS için örnek)
+final_df_group_1.to_csv("/Users/lemannur/Desktop/final_df_group_1.csv", index=False)  # CSV olarak kaydetmek için
+# final_df_group_1.to_excel("/Users/lemannur/Desktop/final_df_group_1.xlsx", index=False)  # Excel olarak kaydetmek için
+
+###2.grup
+
+# Sadece group2'e ait sütunları ve 'genes' sütununu seçelim
+selected_df_group_2 = filtered_gene_expression_df[['genes'] + group2]
+
+filtered_df_group_2 = selected_df_group_2[(selected_df_group_2[group2] > 0.1).all(axis=1)]
+
+# Ortak genleri bulalım
+common_genes_group_2 = filtered_df_group_2['genes'].tolist()
+
+# Ortak genleri yazdıralım
+print("Ortak genler:")
+print(common_genes_group_2)
+
+# Yeni bir dataframe oluştur, sadece bu genler ve group1'e ait sütunları içersin
+final_df_group_2 = filtered_df_group_2[['genes'] + group2]
+
+# Yeni dataframe'i gösterelim
+print("Final DataFrame:")
+print(final_df_group_2)
+
+# Dosyayı masaüstüne kaydetmek için doğru yolu sağlayın (macOS için örnek)
+final_df_group_2.to_csv("/Users/lemannur/Desktop/final_df_group_2.csv", index=False)  # CSV olarak kaydetmek için
+# final_df_group_2.to_excel("/Users/lemannur/Desktop/final_df_group_2.xlsx", index=False)  # Excel olarak kaydetmek için
+
+
+#grup 1 analizleri logFC
+###
+# final_df_group_1 içinde her bir genin tüm sütunlarında 1'den büyük olup olmadığını kontrol edelim
+filtered_genes_logFC1_group_1 = final_df_group_1[(final_df_group_1[group1] > 1).all(axis=1)]
+
+# Ortak genleri yazdıralım
+print("Tüm sütunlarda değeri 2'den büyük olan genler:")
+print(filtered_genes_logFC1_group_1['genes'].tolist())
+len(filtered_genes_logFC1_group_1)
+
+###
+# final_df_group_1 içinde her bir genin tüm sütunlarında 2'den büyük olup olmadığını kontrol edelim
+filtered_genes_logFC2_group_1 = final_df_group_1[(final_df_group_1[group1] > 2).all(axis=1)]
+
+# Ortak genleri yazdıralım
+print("Tüm sütunlarda değeri 2'den büyük olan genler:")
+print(filtered_genes_logFC2_group_1['genes'].tolist())
+len(filtered_genes_logFC2_group_1)
+
+#3 icin
+# final_df_group_1 içinde her bir genin tüm sütunlarında 2'den büyük olup olmadığını kontrol edelim
+filtered_genes_logFC3_group_1 = final_df_group_1[(final_df_group_1[group1] > 3).all(axis=1)]
+
+# Ortak genleri yazdıralım
+print("Tüm sütunlarda değeri 2'den büyük olan genler:")
+print(filtered_genes_logFC3_group_1['genes'].tolist())
+len(filtered_genes_logFC3_group_1)
+
+
+#4 icin
+# final_df_group_1 içinde her bir genin tüm sütunlarında 4'den büyük olup olmadığını kontrol edelim
+filtered_genes_logFC4_group_1 = final_df_group_1[(final_df_group_1[group1] > 4).all(axis=1)]
+
+# Ortak genleri yazdıralım
+print("Tüm sütunlarda değeri 2'den büyük olan genler:")
+print(filtered_genes_logFC4_group_1['genes'].tolist())
+len(filtered_genes_logFC4_group_1)
+
+
+#grup 2 analizleri logFC
+###
+
+# final_df_group_2 içinde her bir genin tüm sütunlarında 1'den büyük olup olmadığını kontrol edelim
+filtered_genes_logFC1_group_2 = final_df_group_2[(final_df_group_2[group2] > 1).all(axis=1)]
+
+# Ortak genleri yazdıralım
+print("Tüm sütunlarda değeri 2'den büyük olan genler:")
+print(filtered_genes_logFC1_group_2['genes'].tolist())
+len(filtered_genes_logFC1_group_2)
+
+
+# final_df_group_2 içinde her bir genin tüm sütunlarında 2'den büyük olup olmadığını kontrol edelim
+filtered_genes_logFC2_group_2 = final_df_group_2[(final_df_group_2[group2] > 2).all(axis=1)]
+
+# Ortak genleri yazdıralım
+print("Tüm sütunlarda değeri 2'den büyük olan genler:")
+print(filtered_genes_logFC2_group_2['genes'].tolist())
+len(filtered_genes_logFC2_group_2)
+
+#3 icin
+# final_df_group_2 içinde her bir genin tüm sütunlarında 3'den büyük olup olmadığını kontrol edelim
+filtered_genes_logFC3_group_2 = final_df_group_2[(final_df_group_2[group2] > 3).all(axis=1)]
+
+# Ortak genleri yazdıralım
+print("Tüm sütunlarda değeri 3'den büyük olan genler:")
+print(filtered_genes_logFC3_group_2['genes'].tolist())
+len(filtered_genes_logFC3_group_2)
+
+
+#4 icin
+# final_df_group_2 içinde her bir genin tüm sütunlarında 4'den büyük olup olmadığını kontrol edelim
+filtered_genes_logFC4_group_2 = final_df_group_2[(final_df_group_2[group2] > 4).all(axis=1)]
+
+# Ortak genleri yazdıralım
+print("Tüm sütunlarda değeri 4'den büyük olan genler:")
+print(filtered_genes_logFC4_group_2['genes'].tolist())
+len(filtered_genes_logFC4_group_2)
+
+####exclusiveness
+##logFC1
+# Group 2'deki 'genes' sütununu alalım
+genes_group_2_logFC1 = set(filtered_genes_logFC1_group_2['genes'])
+
+# Group 1'deki 'genes' sütununu alalım
+genes_group_1_logFC1 = set(filtered_genes_logFC1_group_1['genes'])
+
+# Group 2'ye exclusive olan genleri bulalım (yani group 1'de olmayanlar)
+exclusive_genes_group_2_logFC1 = genes_group_2_logFC1 - genes_group_1_logFC1
+
+# Exclusive genleri yazdıralım
+print(f"Group 2'ye exclusive olan genler: {exclusive_genes_group_2_logFC1}")
+len(exclusive_genes_group_2_logFC1)
+
+
+# Group 1'ye exclusive olan genleri bulalım (yani group 2'de olmayanlar)
+exclusive_genes_group_1_logFC1 = genes_group_1_logFC1 - genes_group_2_logFC1
+
+# Exclusive genleri yazdıralım
+print(f"Group 1'ye exclusive olan genler: {exclusive_genes_group_1_logFC1}")
+len(exclusive_genes_group_1_logFC1)
+
+
+##logFC2
+# Group 2'deki 'genes' sütununu alalım
+genes_group_2_logFC2 = set(filtered_genes_logFC2_group_2['genes'])
+
+# Group 1'deki 'genes' sütununu alalım
+genes_group_1_logFC2 = set(filtered_genes_logFC2_group_1['genes'])
+
+# Group 2'ye exclusive olan genleri bulalım (yani group 1'de olmayanlar)
+exclusive_genes_group_2_logFC2 = genes_group_2_logFC2 - genes_group_1_logFC2
+
+# Exclusive genleri yazdıralım
+print(f"Group 2'ye exclusive olan genler: {exclusive_genes_group_2_logFC2}")
+len(exclusive_genes_group_2_logFC2)
+
+
+# Group 1'ye exclusive olan genleri bulalım (yani group 2'de olmayanlar)
+exclusive_genes_group_1_logFC2 = genes_group_1_logFC2 - genes_group_2_logFC2
+
+# Exclusive genleri yazdıralım
+print(f"Group 1'ye exclusive olan genler: {exclusive_genes_group_1_logFC2}")
+len(exclusive_genes_group_1_logFC2)
+
+
+##logFC3
+# Group 2'deki 'genes' sütununu alalım
+genes_group_2_logFC3 = set(filtered_genes_logFC3_group_2['genes'])
+
+# Group 1'deki 'genes' sütununu alalım
+genes_group_1_logFC3 = set(filtered_genes_logFC3_group_1['genes'])
+
+# Group 2'ye exclusive olan genleri bulalım (yani group 1'de olmayanlar)
+exclusive_genes_group_2_logFC3 = genes_group_2_logFC3 - genes_group_1_logFC3
+
+# Exclusive genleri yazdıralım
+print(f"Group 2'ye exclusive olan genler: {exclusive_genes_group_2_logFC3}")
+len(exclusive_genes_group_2_logFC3)
+
+
+# Group 1'ye exclusive olan genleri bulalım (yani group 2'de olmayanlar)
+exclusive_genes_group_1_logFC3 = genes_group_1_logFC3 - genes_group_2_logFC3
+
+# Exclusive genleri yazdıralım
+print(f"Group 1'ye exclusive olan genler: {exclusive_genes_group_1_logFC3}")
+len(exclusive_genes_group_1_logFC3)
+
+###genel exclusive olanlar:
+
+# Group 2'deki 'genes' sütununu alalım
+genes_group_2 = set(filtered_df_group_2['genes'])
+
+# Group 1'deki 'genes' sütununu alalım
+genes_group_1 = set(filtered_df_group_1['genes'])
+
+# Group 2'ye exclusive olan genleri bulalım (group 1'de olmayanlar)
+exclusive_genes_group_2 = genes_group_2 - genes_group_1
+
+# Group 1'e exclusive olan genleri bulalım (group 2'de olmayanlar)
+exclusive_genes_group_1 = genes_group_1 - genes_group_2
+
+# Exclusive genleri yazdıralım
+print(f"Group 2'ye exclusive olan genler: {exclusive_genes_group_2}")
+print(f"Group 1'e exclusive olan genler: {exclusive_genes_group_1}")
+
+
+####
+
+
+# exclusive_genes_group_1'yi tabloya çevirmek için filtered_df_group_1'de bu genleri filtreleyelim
+exclusive_genes_df_group_1_table = filtered_df_group_1[filtered_df_group_1['genes'].isin(exclusive_genes_group_1)]
+
+# Sonuçları gösterelim (tablo olarak)
+print(exclusive_genes_df_group_1_table)
+
+# Exclusive genleri içeren tabloyu CSV olarak masaüstüne kaydedelim
+exclusive_genes_df_group_1_table.to_csv("/Users/lemannur/Desktop/exclusive_genes_group_1_table.csv", index=False)
+
+# Veya Excel formatında kaydetmek isterseniz:
+# exclusive_genes_df_group_1_table.to_excel("/Users/lemannur/Desktop/exclusive_genes_group_1_table.xlsx", index=False)
+
+
+####
+
+# exclusive_genes_group_2'yi tabloya çevirmek için filtered_df_group_2'de bu genleri filtreleyelim
+exclusive_genes_df_group_2_table = filtered_df_group_2[filtered_df_group_2['genes'].isin(exclusive_genes_group_2)]
+
+# Sonuçları gösterelim (tablo olarak)
+print(exclusive_genes_df_group_2_table)
+
+# Exclusive genleri içeren tabloyu CSV olarak masaüstüne kaydedelim
+exclusive_genes_df_group_2_table.to_csv("/Users/lemannur/Desktop/exclusive_genes_group_2_table.csv", index=False)
+
+# Veya Excel formatında kaydetmek isterseniz:
+# exclusive_genes_df_group_2_table.to_excel("/Users/lemannur/Desktop/exclusive_genes_group_2_table.xlsx", index=False)
+
+
+####
+# Group 1'deki 'genes' sütununu set olarak alalım (logFC > 1 olan genler)
+genes_logFC1_group_1 = set(filtered_genes_logFC1_group_1['genes'])
+# Group 1'de olup, Group 2'de olmayan exclusive genleri bulalım
+exclusive_genes_group_1_logFC1_no_restrictionforgroup2 = genes_logFC1_group_1 - genes_group_2
+# Exclusive genleri tabloya çevirmek için filtered_genes_logFC1_group_1'de bu genleri filtreleyelim
+exclusive_genes_group_1_logFC1_no_restrictionforgroup2 = filtered_genes_logFC1_group_1[filtered_genes_logFC1_group_1['genes'].isin(exclusive_genes_group_1)]
+
+# Sonuçları gösterelim
+print(exclusive_genes_group_1_logFC1_no_restrictionforgroup2)
+
+# İsterseniz tabloyu CSV veya Excel olarak kaydedebilirsiniz
+exclusive_genes_group_1_logFC1_no_restrictionforgroup2.to_csv("/Users/lemannur/Desktop/exclusive_genes_group_1_logFC1_no_restrictionforgroup2.csv", index=False)
+# exclusive_genes_df_group_1.to_excel("/Users/lemannur/Desktop/exclusive_genes_group_1.xlsx", index=False)
+
+####
+
+import pandas as pd
+
+# Masaüstündeki CSV dosyasını içeriye alalım
+file_path = "/Users/lemannur/Desktop/exclusive_genes_group_1_table.csv"
+exclusive_genes_group_1_table = pd.read_csv(file_path)
+
+# İlk birkaç satırı görelim
+print(exclusive_genes_group_1_table.head())
+# Tüm sütunlarda 0.5 ve üzeri olan genleri filtreleyelim
+filtered_genes_logFC05 = exclusive_genes_group_1_table[
+    (exclusive_genes_group_1_table.iloc[:, 1:] >= 0.5).all(axis=1)
+]
+
+# Sonuçları gösterelim
+print(filtered_genes_logFC05)
+
+# Kaç gen bulunduğunu yazdıralım
+print(f"Tüm sütunlarda değeri 0.5 ve üzeri olan genlerin sayısı: {filtered_genes_logFC05.shape[0]}")
+
+# İsterseniz sonucu bir dosyaya kaydedebilirsiniz
+filtered_genes_logFC05.to_csv("/Users/lemannur/Desktop/filtered_genes_logFC05.csv", index=False)
+# filtered_genes_logFC05.to_excel("/Users/lemannur/Desktop/filtered_genes_logFC05.xlsx", index=False)
+
+
+##########
+
+# Tüm sütunlarda 0.4 ve üzeri olan genleri filtreleyelim
+filtered_genes_logFC04 = exclusive_genes_group_1_table[
+    (exclusive_genes_group_1_table.iloc[:, 1:] >= 0.4).all(axis=1)
+]
+
+# Sonuçları gösterelim
+print(filtered_genes_logFC04)
+
+# Kaç gen bulunduğunu yazdıralım
+print(f"Tüm sütunlarda değeri 0.4 ve üzeri olan genlerin sayısı: {filtered_genes_logFC04.shape[0]}")
+
+# İsterseniz sonucu bir dosyaya kaydedebilirsiniz
+filtered_genes_logFC04.to_csv("/Users/lemannur/Desktop/filtered_genes_logFC04.csv", index=False)
+# filtered_genes_logFC04.to_excel("/Users/lemannur/Desktop/filtered_genes_logFC04.xlsx", index=False)
+#######
+
+# Tüm sütunlarda 0.3 ve üzeri olan genleri filtreleyelim
+filtered_genes_logFC03 = exclusive_genes_group_1_table[
+    (exclusive_genes_group_1_table.iloc[:, 1:] >= 0.3).all(axis=1)
+]
+
+# Sonuçları gösterelim
+print(filtered_genes_logFC03)
+
+# Kaç gen bulunduğunu yazdıralım
+print(f"Tüm sütunlarda değeri 0.3 ve üzeri olan genlerin sayısı: {filtered_genes_logFC03.shape[0]}")
+
+# İsterseniz sonucu bir dosyaya kaydedebilirsiniz
+filtered_genes_logFC03.to_csv("/Users/lemannur/Desktop/filtered_genes_logFC03.csv", index=False)
+# filtered_genes_logFC04.to_excel("/Users/lemannur/Desktop/filtered_genes_logFC03.xlsx", index=False)
+#######
+
