@@ -1,0 +1,1143 @@
+# -*- coding: utf-8 -*-
+"""
+Spyder Editor
+
+This is a temporary script file.
+"""
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import numpy as np
+from sklearn.cluster import KMeans
+
+df = pd.read_excel("/Users/lemannur/Desktop/proportions.xlsx")
+
+
+print(df.head())
+unique_libraries = df['library'].nunique()
+print(f"Unique hücre grubu sayısı: {unique_libraries}")
+print(df.columns)
+unique_cluster_names = df['cluster'].unique()
+unique_library_names = df['library'].unique()
+len(unique_cluster_names)
+
+
+# Her bir hücre grubu (library) için olasılık değeri %50'den yüksek olan hücre tiplerini bulalım
+dominant_clusters = df[df['prop'] > 0.50]
+
+# Grupları sıralı olarak görmek için
+dominant_by_library = dominant_clusters.groupby('library')
+
+# Her bir hücre grubunda %50'den büyük olan hücre tiplerini listeleyelim
+for library, group in dominant_by_library:
+    print(f"\nLibrary: {library}")
+    print(group[['cluster', 'prop']])
+
+# Eğer bu dominant hücre gruplarını bir Excel dosyasına kaydetmek isterseniz:
+dominant_clusters.to_excel("/Users/lemannur/Desktop/dominant_clusters.xlsx", index=False)
+
+###
+# Her bir hücre grubu (library) için en yüksek olasılık değerine sahip olan hücre tipini bulalım
+dominant_clusters_max = df.loc[df.groupby('library')['prop'].idxmax()]
+
+# Sonuçları gösterelim
+print(dominant_clusters_max[['library', 'cluster', 'prop']])
+
+# Eğer bu sonuçları Excel dosyasına kaydetmek isterseniz:
+dominant_clusters_max.to_excel("/Users/lemannur/Desktop/dominant_clusters_max.xlsx", index=False)
+
+#########
+# Her bir hücre grubu (library) için benzersiz hücre tiplerinin sayısını bulalım
+cluster_count_per_library = df.groupby('library')['cluster'].nunique()
+
+# Sonuçları sıralayalım (en fazla hücre grubuna sahip olan en üstte olacak şekilde)
+sorted_cluster_count = cluster_count_per_library.sort_values(ascending=False)
+
+# Sonuçları gösterelim
+print(sorted_cluster_count)
+
+# İsterseniz sonuçları Excel dosyasına kaydedebilirsiniz
+sorted_cluster_count.to_excel("/Users/lemannur/Desktop/cluster_count_per_library.xlsx")
+
+######
+
+# prop değeri 0.1'den küçük olanları ele
+filtered_df = df[df['prop'] >= 0.1]
+
+# Her bir hücre grubu (library) için benzersiz hücre tiplerinin isimlerini ve sayısını bulalım
+cluster_info_per_library = filtered_df.groupby('library').agg({
+    'cluster': lambda x: list(x.unique()),  # Benzersiz cluster isimlerini liste olarak topla
+    'cluster': 'nunique'  # Benzersiz cluster sayısını bul
+}).rename(columns={'cluster': 'Cluster Count', '<lambda_0>': 'Cluster Names'})
+
+# Cluster isimlerini de ekle
+cluster_info_per_library['Cluster Names'] = filtered_df.groupby('library')['cluster'].apply(lambda x: ', '.join(x.unique()))
+
+# Sonuçları Excel dosyasına kaydedelim
+cluster_info_per_library.to_excel("/Users/lemannur/Desktop/filtered_cluster_info_per_library.xlsx")
+
+# Sonuçları ekranda gösterelim
+print(cluster_info_per_library)
+####
+
+# semih_bey_clusters ve cluster_info_per_library'nin var olduğunu varsayıyorum
+# Mevcut cluster_info_per_library DataFrame'e Semih Bey'in Cluster Type etiketlerini ekleyelim
+
+# semih_bey_clusters verisiyle mevcut cluster_info_per_library verisini 'library' üzerinden birleştiriyoruz
+cluster_info_per_library_labeled = pd.merge(cluster_info_per_library, semih_bey_clusters, how='left', left_on='library', right_on='Library')
+
+# Eğer eşleşme olmayan satırlar varsa, 'Cluster Type' sütununa 'NA' atayalım
+cluster_info_per_library_labeled['Cluster Type'].fillna('NA', inplace=True)
+
+# 'Library' sütunu birleşimden geldiği için gerek yok, onu kaldıralım
+cluster_info_per_library_labeled.drop(columns=['Library'], inplace=True)
+
+# Sonuçları ekranda gösterelim
+print(cluster_info_per_library_labeled)
+
+# Sonuçları bir Excel dosyasına kaydetmek isterseniz
+cluster_info_per_library_labeled.to_excel("/Users/lemannur/Desktop/filtered_cluster_info_with_labels.xlsx", index=False)
+###
+import pandas as pd
+import scipy.stats as stats
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# ANOVA
+# cluster_info_per_library_labeled = pd.read_csv('path_to_your_data.csv')
+
+# Cluster Type sütununda 'NA' yazılı olanları çıkaralım
+df_cleaned = cluster_info_per_library_labeled[cluster_info_per_library_labeled['Cluster Type'] != 'NA']
+
+# Her bir Cluster Type için Cluster Count'ları gruplayalım
+grouped_data = [df_cleaned[df_cleaned['Cluster Type'] == ct]['Cluster Count'] for ct in df_cleaned['Cluster Type'].unique()]
+
+# ANOVA testi
+anova_result = stats.f_oneway(*grouped_data)
+print(f"ANOVA p-değeri: {anova_result.pvalue}")
+
+# Eğer ANOVA sonucu anlamlı değilse, Kruskal-Wallis testi uygulayalım
+kruskal_result = stats.kruskal(*grouped_data)
+print(f"Kruskal-Wallis p-değeri: {kruskal_result.pvalue}")
+
+# Sonuçları değerlendirelim
+if anova_result.pvalue < 0.05:
+    print("ANOVA testine göre Cluster Type ile Cluster Count arasında anlamlı bir ilişki var.")
+elif kruskal_result.pvalue < 0.05:
+    print("Kruskal-Wallis testine göre Cluster Type ile Cluster Count arasında anlamlı bir ilişki var.")
+else:
+    print("Cluster Type ile Cluster Count arasında anlamlı bir ilişki yok.")
+
+# Kutu grafiğini çizelim ve dışa aktaralım
+plt.figure(figsize=(8,6))
+sns.boxplot(x='Cluster Type', y='Cluster Count', data=df_cleaned)
+plt.title('Cluster Type ve Cluster Count Arasındaki İlişki')
+
+# Grafiği dışa aktaralım (örneğin PNG formatında)
+# Masaüstüne grafiği kaydet
+plt.savefig('/Users/lemannur/Desktop/your_plot.png')  # Dosya adı ve formatını burada belirtebilirsiniz
+plt.show()
+
+#anlamli bir iliski yok
+#####
+
+filtered_df_all = df[df['prop'] != 0]
+
+# Her bir hücre grubu (library) için benzersiz hücre tiplerinin isimlerini ve sayısını bulalım
+cluster_info_per_library_all = filtered_df_all.groupby('library').agg({
+    'cluster': lambda x: list(x.unique()),  # Benzersiz cluster isimlerini liste olarak topla
+    'cluster': 'nunique'  # Benzersiz cluster sayısını bul
+}).rename(columns={'cluster': 'Cluster Count', '<lambda_0>': 'Cluster Names'})
+
+# Cluster isimlerini de ekle
+cluster_info_per_library_all['Cluster Names'] = filtered_df_all.groupby('library')['cluster'].apply(lambda x: ', '.join(x.unique()))
+
+# Sonuçları Excel dosyasına kaydedelim
+cluster_info_per_library_all.to_excel("/Users/lemannur/Desktop/filtered_cluster_info_per_library.xlsx")
+
+# Sonuçları ekranda gösterelim
+print(cluster_info_per_library_all)
+
+
+###
+# Öncelikle semih_bey_clusters DataFrame'deki Cluster Type etiketlerini eklemek için, cluster_info_per_library_all'a 'Library' sütunu ekleyelim
+cluster_info_per_library_all = cluster_info_per_library_all.reset_index()
+
+# semih_bey_clusters ile cluster_info_per_library_all DataFrame'lerini Library sütununa göre birleştirelim
+# Eğer bir eşleşme yoksa Cluster Type 'NA' olarak atanacak
+labeled_clusters = pd.merge(cluster_info_per_library_all, semih_bey_clusters, how='left', left_on='library', right_on='Library')
+
+# Eğer eşleşme olmayan satırlar varsa, 'Cluster Type' sütununa 'NA' atayalım
+labeled_clusters['Cluster Type'].fillna('NA', inplace=True)
+
+# Sonuçları ekranda gösterelim
+print(labeled_clusters)
+
+# İsterseniz sonucu bir Excel dosyasına da kaydedebilirsiniz
+labeled_clusters.to_excel("/Users/lemannur/Desktop/labeled_cluster_info_per_library.xlsx", index=False)
+
+###iliski var mi?
+import scipy.stats as stats
+
+# Cluster Type ve Cluster Count arasında bir çapraz tablo oluşturalım
+contingency_table = pd.crosstab(labeled_clusters['Cluster Type'], labeled_clusters['Cluster Count'])
+
+# Çapraz tabloyu ekranda gösterelim
+print(contingency_table)
+
+# Ki-kare testi ile ilişkiyi inceleyelim
+chi2, p, dof, expected = stats.chi2_contingency(contingency_table)
+
+# Test sonuçlarını gösterelim
+print(f"Ki-kare Değeri: {chi2}")
+print(f"p-değeri: {p}")
+
+# p-değerine göre sonuçları değerlendirelim
+if p < 0.05:
+    print("Cluster Type ile Cluster Count arasında istatistiksel olarak anlamlı bir ilişki var.")
+else:
+    print("Cluster Type ile Cluster Count arasında istatistiksel olarak anlamlı bir ilişki yok.")
+####anlamli bir iliski yok...
+###
+import pandas as pd
+
+
+###
+
+import pandas as pd
+import scipy.stats as stats
+
+# 'NA' olan Cluster Type değerlerini çıkartalım
+filtered_labeled_clusters = labeled_clusters[labeled_clusters['Cluster Type'] != 'NA']
+
+# Cluster Type ve Cluster Count arasında bir çapraz tablo oluşturalım
+contingency_table = pd.crosstab(filtered_labeled_clusters['Cluster Type'], filtered_labeled_clusters['Cluster Count'])
+
+# Çapraz tabloyu ekranda gösterelim
+print(contingency_table)
+
+# Ki-kare testi ile ilişkiyi inceleyelim
+chi2, p, dof, expected = stats.chi2_contingency(contingency_table)
+
+# Test sonuçlarını gösterelim
+print(f"Ki-kare Değeri: {chi2}")
+print(f"p-değeri: {p}")
+
+# p-değerine göre sonuçları değerlendirelim
+if p < 0.05:
+    print("Cluster Type ile Cluster Count arasında istatistiksel olarak anlamlı bir ilişki var.")
+else:
+    print("Cluster Type ile Cluster Count arasında istatistiksel olarak anlamlı bir ilişki yok.")
+####
+# Verilen veriyi bir liste olarak tanımlayalım
+data_S = {
+    'Cluster Type': ['BL', 'BL', 'BL', 'BL', 'BL', 'BL', 'BL', 'BL', 'BL', 'BL', 'BL', 'BL', 'BL',
+                     'TL', 'TL', 'TL', 'TL',
+                     'TR', 'TR', 'TR', 'TR', 'TR', 'TR', 'TR', 'TR', 'TR', 'TR', 'TR', 'TR', 'TR', 'TR', 'TR',
+                     'BR', 'BR', 'BR', 'BR', 'BR'],
+    'Library': ['C103_T', 'C104_T', 'C105_T', 'C112_T', 'C113_T', 'C126_T', 'C129_T', 'C140_T', 'C145_T', 'C157_T', 'C161_T', 'C162_T', 'C166_T',
+                'C107_T', 'C136_T', 'C159_T', 'C172_T',
+                'C106_T', 'C110_T', 'C115_T', 'C116_T', 'C119_T', 'C123_T', 'C132_T', 'C137_T', 'C142_T', 'C156_T', 'C163_T', 'C167_T', 'C168_T', 'C169_T', 'C173_T',
+                'C109_T', 'C111_T', 'C139_T', 'C158_T', 'C165_T']
+}
+
+# DataFrame'e dönüştürelim
+semih_bey_clusters = pd.DataFrame(data_S)
+
+# DataFrame'i kontrol edelim
+print(semih_bey_clusters)
+
+
+###
+
+# prop değeri 0.1'den küçük olanları ele
+filtered_df = df[df['prop'] >= 0.1]
+
+# Her bir hücre grubu (library) için benzersiz hücre tiplerinin sayısını bulalım
+cluster_count_per_library = filtered_df.groupby('library')['cluster'].nunique()
+
+# Sonuçları sıralayalım (en fazla hücre grubuna sahip olan en üstte olacak şekilde)
+sorted_cluster_count = cluster_count_per_library.sort_values(ascending=False)
+
+# Sonuçları gösterelim
+print(sorted_cluster_count)
+
+# İsterseniz sonuçları Excel dosyasına kaydedebilirsiniz
+sorted_cluster_count.to_excel("/Users/lemannur/Desktop/filtered_cluster_count_per_library.xlsx")
+
+kmeans = KMeans(n_clusters=3)
+kmeans.fit(df[['prop']])
+df['cluster_label'] = kmeans.labels_
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Correlation matrix oluşturma
+correlation_matrix = df.pivot(index='library', columns='cluster', values='prop').corr()
+
+# Heatmap oluşturma
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm')
+
+# Grafiği göstermek için plt.show() komutu ekleyin
+plt.show()
+
+
+
+########### k means:
+
+import pandas as pd
+from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
+
+# Veriyi yükleyelim
+df = pd.read_excel("/Users/lemannur/Desktop/proportions.xlsx")
+
+# Sadece sayısal veriler üzerinden kümeleme yapabilmek için, 'library' gibi kategorik sütunları atlıyoruz
+pivot_df = df.pivot(index='library', columns='cluster', values='prop').fillna(0)
+
+# K-Means algoritmasını uygulayalım (örneğin, 3 küme ile)
+kmeans = KMeans(n_clusters=3, random_state=42)
+kmeans.fit(pivot_df)
+
+# Kümeleri alalım
+clusters = kmeans.labels_
+
+# Sonuçları veri çerçevesine ekleyelim
+pivot_df['Cluster'] = clusters
+
+# K-Means sonucu görselleştirme
+plt.figure(figsize=(10, 8))
+plt.scatter(pivot_df.index, clusters, c=clusters, cmap='viridis')
+plt.title('K-Means Clustering')
+plt.xlabel('Libraries')
+plt.ylabel('Cluster Labels')
+plt.xticks(rotation=90)  # X eksenindeki etiketleri döndürmek için
+plt.grid(True)
+plt.show()
+
+# Eğer sonuçları Excel'e kaydetmek isterseniz
+pivot_df.to_excel("/Users/lemannur/Desktop/kmeans_clustered_data.xlsx")
+
+
+#####clusteringler anlamsiz...:
+
+import pandas as pd
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
+
+# Veriyi yükleyelim
+df = pd.read_excel("/Users/lemannur/Desktop/proportions.xlsx")
+
+# Sadece sayısal veriler üzerinden analiz yapalım, 'library' gibi kategorik sütunları çıkarıyoruz
+pivot_df = df.pivot(index='library', columns='cluster', values='prop').fillna(0)
+
+# t-SNE kullanarak boyut indirgeme
+tsne = TSNE(n_components=2, random_state=42)
+tsne_results = tsne.fit_transform(pivot_df)
+
+# t-SNE sonucu görselleştirme
+plt.figure(figsize=(10, 8))
+plt.scatter(tsne_results[:, 0], tsne_results[:, 1], cmap='viridis')
+plt.title('t-SNE Clustering Visualization')
+plt.xlabel('t-SNE 1')
+plt.ylabel('t-SNE 2')
+plt.grid(True)
+plt.show()
+
+######
+from sklearn.cluster import DBSCAN
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Veriyi yükleyelim
+df = pd.read_excel("/Users/lemannur/Desktop/proportions.xlsx")
+
+# Sadece sayısal veriler üzerinden analiz yapalım
+pivot_df = df.pivot(index='library', columns='cluster', values='prop').fillna(0)
+
+# DBSCAN kullanarak kümeleme
+dbscan = DBSCAN(eps=0.5, min_samples=2)  # eps ve min_samples ayarlarını değiştirebilirsiniz
+clusters = dbscan.fit_predict(pivot_df)
+
+# Sonuçları veri çerçevesine ekleyelim
+pivot_df['Cluster'] = clusters
+
+# DBSCAN sonucu görselleştirme
+plt.figure(figsize=(10, 8))
+plt.scatter(pivot_df.index, clusters, c=clusters, cmap='viridis')
+plt.title('DBSCAN Clustering')
+plt.xlabel('Libraries')
+plt.ylabel('Cluster Labels')
+plt.xticks(rotation=90)  # X eksenindeki etiketleri döndürmek için
+plt.grid(True)
+plt.show()
+
+#######
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy.cluster.hierarchy import dendrogram, linkage
+
+# Veriyi yükleyelim
+df = pd.read_excel("/Users/lemannur/Desktop/proportions.xlsx")
+
+# Sadece sayısal veriler üzerinden analiz yapalım
+pivot_df = df.pivot(index='library', columns='cluster', values='prop').fillna(0)
+
+# Hiyerarşik kümeleme kullanarak linkage matrisi oluşturma
+linked = linkage(pivot_df, method='ward')
+
+# Dendrogram görselleştirme
+plt.figure(figsize=(10, 7))
+dendrogram(linked, labels=pivot_df.index, orientation='top', distance_sort='descending')
+plt.title('Hierarchical Clustering Dendrogram')
+plt.xlabel('Library')
+plt.ylabel('Distance')
+plt.xticks(rotation=90)
+plt.show()
+
+######
+from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
+
+inertia = []
+K = range(1, 10)
+for k in K:
+    kmeans = KMeans(n_clusters=k, random_state=42)
+    kmeans.fit(pivot_df)
+    inertia.append(kmeans.inertia_)
+
+# Elbow grafiği
+plt.figure(figsize=(8, 6))
+plt.plot(K, inertia, 'bx-')
+plt.xlabel('Number of clusters')
+plt.ylabel('Inertia')
+plt.title('Elbow Method For Optimal k')
+plt.show()
+
+###### en bastan devam:
+
+import pandas as pd
+
+# 1. Excel dosyasını okuyalım
+df = pd.read_excel("/Users/lemannur/Desktop/proportions.xlsx")
+
+# 2. Prop değeri 0'dan büyük olanları filtreleyelim
+df_filtered = df[df['prop'] > 0]
+
+# 3. Her bir library için benzersiz cluster sayısını hesaplayalım
+unique_cluster_counts = df_filtered.groupby('library')['cluster'].nunique()
+
+# 4. Sonuçları görelim
+print(unique_cluster_counts)
+
+
+######
+
+# Önceden belirlediğiniz 4 ve üzeri cluster count'a sahip library'ler
+selected_libraries = ['C135_T', 'C124_T', 'C170_T', 'C118_T', 'C137_T', 'C138_T', 'C164_T',
+                      'C129_T', 'C125_T', 'C167_T', 'C168_T', 'C126_T', 'C157_T', 'C111_T',
+                      'C110_T', 'C172_T', 'C156_T', 'C149_T', 'C105_T']
+
+# cluster_info_per_library veri setinden sadece bu library'leri filtreleyelim
+selected_cluster_info = cluster_info_per_library[cluster_info_per_library.index.isin(selected_libraries)]
+
+# Sonuçları gösterelim
+print(selected_cluster_info)
+
+# İsterseniz sonuçları Excel'e kaydedebilirsiniz
+selected_cluster_info.to_excel("/Users/lemannur/Desktop/selected_cluster_info.xlsx")
+
+#####
+# Önceden belirlediğiniz selected_cluster_info'dan cluster isimlerini ayrıştırma
+# Tüm library'ler boyunca cluster isimlerini tek bir liste haline getirelim
+all_clusters = selected_cluster_info['Cluster Names'].apply(lambda x: x.split(', '))
+
+# Bu listeleri birleştirelim
+all_clusters_flat = [cluster for sublist in all_clusters for cluster in sublist]
+
+# Her bir cluster'ın toplam kaç kez geçtiğini bulalım
+cluster_summary = pd.Series(all_clusters_flat).value_counts()
+
+# Sonuçları gösterelim
+print(cluster_summary)
+
+# Sonuçları Excel'e kaydetmek isterseniz
+cluster_summary.to_excel("/Users/lemannur/Desktop/total_cluster_summary.xlsx")
+
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Önceden belirlediğiniz selected_cluster_info'dan cluster isimlerini ayrıştırma
+# Tüm library'ler boyunca cluster isimlerini tek bir liste haline getirelim
+all_clusters = selected_cluster_info['Cluster Names'].apply(lambda x: x.split(', '))
+
+# Bu listeleri birleştirelim
+all_clusters_flat = [cluster for sublist in all_clusters for cluster in sublist]
+
+# Her bir cluster'ın toplam kaç kez geçtiğini bulalım
+cluster_summary = pd.Series(all_clusters_flat).value_counts()
+
+# Sonuçları gösterelim
+print(cluster_summary)
+
+# Sonuçları Excel'e kaydetmek isterseniz
+cluster_summary.to_excel("/Users/lemannur/Desktop/total_cluster_summary.xlsx")
+
+# Bar plot ile görselleştirme
+plt.figure(figsize=(10, 6))
+cluster_summary.plot(kind='bar', color='skyblue')
+
+# Grafik başlık ve etiketlerini ekleyelim
+plt.title('Total Occurrence of Clusters Across Selected Libraries', fontsize=16)
+plt.xlabel('Cluster Names', fontsize=12)
+plt.ylabel('Number of Occurrences', fontsize=12)
+plt.xticks(rotation=90)
+plt.tight_layout()
+
+# Grafiği gösterelim
+plt.show()
+
+########
+
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Önceden belirlediğiniz selected_cluster_info'dan cluster isimlerini ayrıştırma
+# Tüm library'ler boyunca cluster isimlerini tek bir liste haline getirelim
+all_clusters = selected_cluster_info['Cluster Names'].apply(lambda x: x.split(', '))
+
+# Bu listeleri birleştirelim
+all_clusters_flat = [cluster for sublist in all_clusters for cluster in sublist]
+
+# Her bir cluster'ın toplam kaç kez geçtiğini bulalım
+cluster_summary = pd.Series(all_clusters_flat).value_counts()
+
+# Sonuçları gösterelim
+print(cluster_summary)
+
+# Sonuçları Excel'e kaydetmek isterseniz
+cluster_summary.to_excel("/Users/lemannur/Desktop/total_cluster_summary.xlsx")
+
+# Bar plot ile görselleştirme
+plt.figure(figsize=(10, 6))
+cluster_summary.plot(kind='bar', color='skyblue')
+
+# Grafik başlık ve etiketlerini ekleyelim
+plt.title('Total Occurrence of Clusters Across Selected Libraries, for prob>0.1, libraries have 4 or 5 clusters', fontsize=12)
+plt.xlabel('Cluster Names', fontsize=12)
+plt.ylabel('Number of Occurrences', fontsize=12)
+plt.xticks(rotation=90)
+plt.tight_layout()
+
+# Grafiği gösterelim
+plt.show()
+plt.savefig("/Users/lemannur/Desktop/cluster_occurrence_plot.png", format='png', dpi=300)
+
+
+
+#####
+
+import pandas as pd
+
+# 1. Excel dosyasını okuyalım
+df = pd.read_excel("/Users/lemannur/Desktop/proportions.xlsx")
+
+# 2. İlgili prop değeri 0.1'den büyük olanları filtreleyelim
+df_filtered = df[df['prop'] > 0.1]
+
+# 3. Hedef hücre tipleri
+target_clusters = ['EpiT', 'TCD4', 'Macro', 'TCD8', 'Mono']
+
+# 4. Her bir library'deki cluster isimlerini gruplayalım
+library_clusters = df_filtered.groupby('library')['cluster'].apply(lambda x: list(x.unique()))
+
+# 5. En az 3 hedef cluster'ı içeren library'leri bulalım
+def contains_at_least_3_clusters(cluster_list):
+    # Hedef cluster'lar ile mevcut cluster'ların kesişimini bulalım
+    common_clusters = set(cluster_list).intersection(target_clusters)
+    # Eğer kesişimde en az 3 cluster varsa True döndür
+    return len(common_clusters) >= 3
+
+# 6. Filtreleme işlemi
+libraries_with_3_or_more = library_clusters[library_clusters.apply(contains_at_least_3_clusters)]
+
+# 7. Sonuçları gösterelim
+print(libraries_with_3_or_more)
+
+# İsterseniz sonuçları Excel dosyasına kaydedelim
+libraries_with_3_or_more.to_excel("/Users/lemannur/Desktop/libraries_with_3_or_more_clusters_from_df.xlsx")
+
+
+####
+
+import pandas as pd
+import pandas as pd
+
+# Hücre tiplerinin listesi
+target_clusters = ['EpiT', 'TCD4', 'Macro', 'TCD8', 'Mono']
+
+# Eğer 'Cluster Names' zaten bir listeyse, split işlemini kaldırıyoruz
+# En az 3 hedef cluster'ı içeren library'leri bulalım
+def contains_at_least_3_clusters(cluster_list):
+    # Hedef cluster'lar ile mevcut cluster'ların kesişimini bulalım
+    common_clusters = set(cluster_list).intersection(target_clusters)
+    # Eğer kesişimde en az 3 cluster varsa True döndür
+    return len(common_clusters) >= 3
+
+# Filtreleme işlemi
+libraries_with_3_or_more = selected_cluster_info[selected_cluster_info['Cluster Names'].apply(contains_at_least_3_clusters)]
+
+# Sonuçları gösterelim
+print(libraries_with_3_or_more)
+
+# İsterseniz sonuçları Excel'e kaydedebilirsiniz
+libraries_with_3_or_more.to_excel("/Users/lemannur/Desktop/libraries_with_3_or_more_clusters.xlsx", index=False)
+#######
+# Cluster'ları alfabetik olarak sıralayalım, böylece aynı cluster setine sahip olan library'leri bulalım
+libraries_with_3_or_more = libraries_with_3_or_more.copy()  # Orijinal veri setini değiştirmemek için bir kopya alıyoruz
+libraries_with_3_or_more.loc[:, 'Sorted Clusters'] = libraries_with_3_or_more['Cluster Names'].apply(lambda x: tuple(sorted(x)))
+
+# Aynı cluster setlerine sahip olan library'leri bulalım
+duplicate_clusters = libraries_with_3_or_more.groupby('Sorted Clusters').filter(lambda x: len(x) > 1)
+
+# Eğer library index olarak ayarlanmışsa, onu sütun olarak geri ekleyelim
+if 'library' not in duplicate_clusters.columns:
+    duplicate_clusters = duplicate_clusters.reset_index()
+
+# Sonuçları gösterelim
+print(duplicate_clusters[['library', 'Cluster Names']])
+
+# İsterseniz sonuçları Excel dosyasına kaydedebilirsiniz
+duplicate_clusters[['library', 'Cluster Names']].to_excel("/Users/lemannur/Desktop/duplicate_clusters_libraries.xlsx", index=False)
+#####
+
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# 1. Excel dosyasını okuyalım (kendi veri setinizi kullanın)
+df = pd.read_excel("/Users/lemannur/Desktop/proportions.xlsx")
+
+# 2. İlgili prop değeri 0.1'den büyük olanları filtreleyelim (isteğe bağlı)
+df_filtered = df[df['prop'] > 0.1]
+
+# 3. Hedef library'leri seçelim (sonuçta verdiğiniz library'ler)
+selected_libraries = ['C111_T', 'C126_T', 'C167_T', 'C168_T', 'C172_T']
+
+# 4. Bu library'lerdeki cluster ve prop değerlerini filtreleyelim
+df_selected = df_filtered[df_filtered['library'].isin(selected_libraries)]
+
+# 5. Her bir library için bar grafiği oluşturalım
+fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(15, 8), sharey=True)
+axes = axes.flatten()
+
+for i, library in enumerate(selected_libraries):
+    library_data = df_selected[df_selected['library'] == library]
+    clusters = library_data['cluster']
+    probs = library_data['prop']
+
+    axes[i].bar(clusters, probs, color='skyblue')
+    axes[i].set_title(library)
+    axes[i].set_ylim(0, 1)  # Prop değerlerinin 0 ile 1 arasında olduğunu varsayıyoruz
+    axes[i].set_xlabel('Clusters')
+    axes[i].set_ylabel('Probability')
+
+# Boş grafik alanlarını kaldır
+for ax in axes[len(selected_libraries):]:
+    ax.set_visible(False)
+
+plt.tight_layout()
+plt.show()
+
+###yukaridakinin sonuclari kaydedilmis hali:
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# 1. Excel dosyasını okuyalım (kendi veri setinizi kullanın)
+df = pd.read_excel("/Users/lemannur/Desktop/proportions.xlsx")
+
+# 2. İlgili prop değeri 0.1'den büyük olanları filtreleyelim (isteğe bağlı)
+df_filtered = df[df['prop'] > 0.1]
+
+# 3. Hedef library'leri seçelim (sonuçta verdiğiniz library'ler)
+selected_libraries = ['C111_T', 'C126_T', 'C167_T', 'C168_T', 'C172_T']
+
+# 4. Bu library'lerdeki cluster ve prop değerlerini filtreleyelim
+df_selected = df_filtered[df_filtered['library'].isin(selected_libraries)]
+
+# 5. Her bir library için bar grafiği oluşturalım
+fig, axes = plt.subplots(nrows=2, ncols=3, figsize=(15, 8), sharey=True)
+axes = axes.flatten()
+
+for i, library in enumerate(selected_libraries):
+    library_data = df_selected[df_selected['library'] == library]
+    clusters = library_data['cluster']
+    probs = library_data['prop']
+
+    axes[i].bar(clusters, probs, color='skyblue')
+    axes[i].set_title(library)
+    axes[i].set_ylim(0, 1)  # Prop değerlerinin 0 ile 1 arasında olduğunu varsayıyoruz
+    axes[i].set_xlabel('Clusters')
+    axes[i].set_ylabel('Probability')
+
+# Boş grafik alanlarını kaldır
+for ax in axes[len(selected_libraries):]:
+    ax.set_visible(False)
+
+plt.tight_layout()
+
+# Grafiği kaydedelim
+plt.savefig("/Users/lemannur/Desktop/library_cluster_probs.png", format='png', dpi=300)
+
+# Grafiği gösterelim
+plt.show()
+###
+import pandas as pd
+
+# 1. Excel dosyasını okuyalım (kendi veri setinizi kullanın)
+df = pd.read_excel("/Users/lemannur/Desktop/proportions.xlsx")
+
+# 2. İlgili prop değeri 0.1'den büyük olanları filtreleyelim (isteğe bağlı)
+df_filtered = df[df['prop'] > 0.1]
+
+# 3. Hedef library'leri seçelim (sonuçta verdiğiniz library'ler)
+selected_libraries = ['C111_T', 'C126_T', 'C167_T', 'C168_T', 'C172_T']
+
+# 4. Bu library'lerdeki cluster ve prop değerlerini filtreleyelim
+df_selected = df_filtered[df_filtered['library'].isin(selected_libraries)]
+
+# 5. Her bir library için cluster'ların prop değerlerini bulalım
+# Cluster'ların listelerini almak için önceki çıktınızdaki cluster isimlerini kullanabiliriz
+cluster_names = {
+    'C111_T': ['EpiT', 'TCD4', 'Macro', 'Mono'],
+    'C126_T': ['EpiT', 'TCD4', 'Macro', 'Mono'],
+    'C167_T': ['EpiT', 'TCD4', 'Macro', 'TCD8'],
+    'C168_T': ['EpiT', 'TCD4', 'Macro', 'TCD8'],
+    'C172_T': ['EpiT', 'TCD4', 'Macro', 'TCD8']
+}
+
+# Sonuçları saklamak için bir liste oluşturuyoruz
+results = []
+
+# Her bir library için prop değerlerini bulalım
+for library, clusters in cluster_names.items():
+    for cluster in clusters:
+        # İlgili cluster için prop değerini bulalım
+        prop_value = df_selected[(df_selected['library'] == library) & (df_selected['cluster'] == cluster)]['prop']
+        if not prop_value.empty:
+            results.append({
+                'Library': library,
+                'Cluster': cluster,
+                'Prop': prop_value.values[0]  # İlk (ve tek) değeri alıyoruz
+            })
+
+# Sonuçları bir DataFrame'e dönüştürelim
+results_df = pd.DataFrame(results)
+
+# Sonuçları gösterelim
+print(results_df)
+
+# İsterseniz sonuçları Excel dosyasına kaydedebilirsiniz
+results_df.to_excel("/Users/lemannur/Desktop/library_cluster_props.xlsx", index=False)
+###
+import pandas as pd
+
+# 1. Excel dosyasını okuyalım (kendi veri setinizi kullanın)
+df = pd.read_excel("/Users/lemannur/Desktop/proportions.xlsx")
+
+# 2. İlgili prop değeri 0.1'den büyük olanları filtreleyelim (isteğe bağlı)
+df_filtered = df[df['prop'] > 0.1]
+
+# 3. Hedef library'leri seçelim (sonuçta verdiğiniz library'ler)
+selected_libraries = ['C111_T', 'C126_T', 'C167_T', 'C168_T', 'C172_T']
+
+# 4. Bu library'lerdeki cluster ve prop değerlerini filtreleyelim
+df_selected = df_filtered[df_filtered['library'].isin(selected_libraries)]
+
+# 5. Her bir library için cluster'ların prop değerlerini bulalım
+cluster_names = {
+    'C111_T': ['EpiT', 'TCD4', 'Macro', 'Mono'],
+    'C126_T': ['EpiT', 'TCD4', 'Macro', 'Mono'],
+    'C167_T': ['EpiT', 'TCD4', 'Macro', 'TCD8'],
+    'C168_T': ['EpiT', 'TCD4', 'Macro', 'TCD8'],
+    'C172_T': ['EpiT', 'TCD4', 'Macro', 'TCD8']
+}
+
+# Sonuçları saklamak için bir liste oluşturuyoruz
+results = []
+
+# Her bir library için prop değerlerini bulalım
+for library, clusters in cluster_names.items():
+    for cluster in clusters:
+        # İlgili cluster için prop değerini bulalım
+        prop_value = df_selected[(df_selected['library'] == library) & (df_selected['cluster'] == cluster)]['prop']
+        if not prop_value.empty:
+            results.append({
+                'Library': library,
+                'Cluster': cluster,
+                'Prop': prop_value.values[0]  # İlk (ve tek) değeri alıyoruz
+            })
+
+# Sonuçları bir DataFrame'e dönüştürelim
+results_df = pd.DataFrame(results)
+
+# Her bir library için toplam prop değerlerini hesaplayalım
+total_prop_per_library = results_df.groupby('Library')['Prop'].sum().reset_index()
+
+# Sonuçları gösterelim
+print("Total Prop Values per Library:")
+print(total_prop_per_library)
+
+# İsterseniz sonuçları Excel'e kaydedebilirsiniz
+total_prop_per_library.to_excel("/Users/lemannur/Desktop/total_prop_per_library.xlsx", index=False)
+#####
+
+# semih_bey_clusters'taki Library değerleri ile duplicate_clusters'taki library değerlerini karşılaştırmak
+semih_bey_libraries = set(semih_bey_clusters['Library'])
+duplicate_libraries = set(duplicate_clusters['library'])
+
+# Semih Bey clusters'ta olup, duplicate_clusters'ta olmayan Library değerlerini bulmak
+exclusive_to_semih_bey = semih_bey_libraries - duplicate_libraries
+
+# Sonuçları yazdırma
+print("Semih Bey clusters'ta olup duplicate_clusters'ta olmayan Library değerleri:")
+print(exclusive_to_semih_bey)
+
+#####
+# semih_bey_clusters'taki Library değerleri ile duplicate_clusters'taki library değerlerini karşılaştırmak
+semih_bey_libraries = set(semih_bey_clusters['Library'])
+duplicate_libraries = set(duplicate_clusters['library'])
+
+# duplicate_clusters'ta olup, semih_bey_clusters'ta olmayan Library değerlerini bulmak
+exclusive_to_duplicate = duplicate_libraries - semih_bey_libraries
+
+# Sonuçları yazdırma
+print("duplicate_clusters'ta olup semih_bey_clusters'ta olmayan Library değerleri:")
+print(exclusive_to_duplicate)
+mono = pd.read_excel("/Users/lemannur/Desktop/mono.xlsx")
+macro = pd.read_excel("/Users/lemannur/Desktop/macro.xlsx")
+
+from streamlit import header
+
+print(mono.head())
+
+filtered_mono = mono[['genes'] + group1]
+filtered_mono_2 = mono[['genes'] + group2]
+
+filtered_macro = macro[['genes'] + group1]
+filtered_macro2 = macro[['genes'] + group2]
+# Display the filtered dataframe
+print(filtered_mono.head())
+# Export the filtered dataframe
+filtered_mono.to_csv('/Users/lemannur/Desktop/filtered_mono.csv', index=False)
+filtered_mono_2.to_csv('/Users/lemannur/Desktop/filtered_mono_2.csv', index=False)
+
+filtered_macro.to_csv('/Users/lemannur/Desktop/filtered_macro.csv', index=False)
+filtered_macro2.to_csv('/Users/lemannur/Desktop/filtered_macro_2.csv', index=False)
+
+
+# Filter rows where all values in group1 columns are greater than 0.1
+filtered_genes_mono = filtered_mono[(filtered_mono[group1] > 0.1).all(axis=1)]
+filtered_genes_mono2 = filtered_mono_2[(filtered_mono_2[group2] > 0.1).all(axis=1)]
+
+filtered_genes_macro = filtered_macro[(filtered_macro[group1] > 0.1).all(axis=1)]
+filtered_genes_macro2 = filtered_macro2[(filtered_macro2[group2] > 0.1).all(axis=1)]
+
+# Display the resulting dataframe or export it
+filtered_genes_mono.to_csv('/Users/lemannur/Desktop/filtered_genes_mono.csv', index=False)
+filtered_genes_mono2.to_csv('/Users/lemannur/Desktop/filtered_genes_mono2.csv', index=False)
+
+filtered_genes_macro.to_csv('/Users/lemannur/Desktop/filtered_genes_macro.csv', index=False)
+filtered_genes_macro2.to_csv('/Users/lemannur/Desktop/filtered_genes_macro2.csv', index=False)
+
+##0.1 cok fazla gen verdi, 0.5ile devam etcem.
+# Filter rows where all values in group1 columns are greater than 0.1
+filtered_genes_mono_5 = filtered_mono[(filtered_mono[group1] > 0.5).all(axis=1)]
+filtered_genes_mono2_5 = filtered_mono_2[(filtered_mono_2[group2] > 0.5).all(axis=1)]
+
+filtered_genes_macro_5 = filtered_macro[(filtered_macro[group1] > 0.5).all(axis=1)]
+filtered_genes_macro2_5 = filtered_macro2[(filtered_macro2[group2] > 0.5).all(axis=1)]
+
+filtered_genes_mono_5.to_csv('/Users/lemannur/Desktop/filtered_genes_mono_5.csv', index=False)
+filtered_genes_mono2_5.to_csv('/Users/lemannur/Desktop/filtered_genes_mono2_5.csv', index=False)
+
+filtered_genes_macro_5.to_csv('/Users/lemannur/Desktop/filtered_genes_macro_5.csv', index=False)
+filtered_genes_macro2_5.to_csv('/Users/lemannur/Desktop/filtered_genes_macro2_5.csv', index=False)
+
+protein = pd.read_excel("/Users/lemannur/Desktop/proteom1.xlsx")
+
+columns_to_select = [
+    'Gene', 'L5T', 'L7T', 'L9T', 'L12T', 'L17T', 'L18T', 'L20T', 'L21T',
+    'L24T', 'L25T', 'L29T', 'L30T', 'L32T', 'L33T', 'L34T', 'L36T', 'L39T',
+    'L42T', 'L47T', 'L50T', 'L52T', 'L54T', 'L58T', 'L60T', 'L61T', 'L62T',
+    'L64T', 'L66T', 'L68T', 'L69T', 'L70T', 'L72T', 'L75T', 'L77T', 'L79T',
+    'L81T', 'L82T', 'L90T', 'L91T', 'L94T', 'L95T', 'L99T', 'L105T', 'L112T',
+    'L113T', 'L118T', 'L119T', 'L120T', 'L123T', 'L126T', 'L128T', 'L129T', 'L131T',
+    'L133T', 'L134T', 'L136T', 'L138T', 'L141T', 'L143T', 'L144T', 'L145T', 'L148T',
+    'L149T', 'L152T', 'L157T', 'CRC2T', 'CRC3T', 'CRC4T', 'CRC9T', 'CRC11T',
+    'CRC19T', 'CRC20T', 'CRC26T', 'CRC31T', 'CRC35T', 'CRC44T', 'CRC50T',
+    'CRC52T', 'CRC56T', 'CRC62T', 'CRC63T', 'CRC64T', 'CRC65T', 'CRC71T',
+    'CRC77T', 'CRC78T', 'CRC81T', 'CRC82T', 'CRC88T', 'CRC89T', 'CRC91T',
+    'CRC93T', 'CRC94T', 'CRC96T', 'CRC97T', 'CRC98T', 'CRC99T', 'CRC104T',
+    'CRC105T', 'CRC111T', 'CRC114T', 'CRC115T', 'CRC116T', 'CRC117T', 'CRC118T',
+    'CRC123T', 'CRC127T', 'CRC128T', 'CRC130T', 'CRC131T', 'CRC132T', 'CRC135T',
+    'CRC138T', 'CRC140T', 'CRC141T'
+]
+protein=new_df
+summary_df = pd.DataFrame()
+summary_df['Gene'] = protein['Gene']
+summary_df['Mean'] = protein.iloc[:, 1:].mean(axis=1)
+summary_df['Variance'] = protein.iloc[:, 1:].var(axis=1)
+summary_df['Median'] = protein.iloc[:, 1:].median(axis=1)
+summary_df['Max'] = protein.iloc[:, 1:].max(axis=1)
+summary_df['Min'] = protein.iloc[:, 1:].min(axis=1)
+summary_df['Std'] = protein.iloc[:, 1:].std(axis=1)
+print(summary_df)
+# Varyansı en düşük geni bulma
+lowest_variance_genes = summary_df.nsmallest(500, 'Variance')
+
+# Sonuçları gösterme
+lowest_variance_genes[['Gene', 'Variance']]
+# Ortalama değeri en yüksek olan gen
+highest_mean_genes = summary_df.nlargest(1000, 'Mean')
+# Ortalaması en yüksek ve varyansı en düşük olan genleri bulma (intersection)
+cluster_genes = pd.merge(highest_mean_genes, lowest_variance_genes, on='Gene')
+
+# Sonuçları gösterme
+print(cluster_genes[['Gene', 'Mean_x', 'Variance_y']])
+reliable_low_std_genes = summary_df[summary_df['Std'] < 0.5]
+
+# Yeni cluster olarak kaydetme
+cluster_genes.to_csv("/Users/lemannur/Desktop/cluster_genes.csv", index=False)
+
+
+# Mean sütunundaki en küçük değeri bulma
+min_mean_value = summary_df['Mean'].min()
+min_mean_gene = summary_df.loc[summary_df['Mean'].idxmin()]
+
+# Sonucu gösterme
+print(f"En küçük Mean değeri: {min_mean_value}")
+print(min_mean_gene)
+
+# Mean sütunundaki en büyük değeri bulma
+max_mean_value = summary_df['Mean'].max()
+max_mean_gene = summary_df.loc[summary_df['Mean'].idxmax()]
+
+# Sonucu gösterme
+print(f"En büyük Mean değeri: {max_mean_value}")
+print(max_mean_gene)
+
+
+# %30'luk grubu hesaplama
+n = len(summary_df)
+
+# En düşük %30'luk grup (Mean değerleri en düşük olan ilk %30)
+low_30_percent = summary_df.nsmallest(int(n * 0.30), 'Mean')
+
+# En yüksek %30'luk grup (Mean değerleri en yüksek olan ilk %30)
+high_30_percent = summary_df.nlargest(int(n * 0.30), 'Mean')
+
+# Sonuçları gösterme
+print("En düşük %30'luk Mean grubu:")
+print(low_30_percent[['Gene', 'Mean']])
+
+print("\nEn yüksek %30'luk Mean grubu:")
+print(high_30_percent[['Gene', 'Mean']])
+
+# Grupları CSV dosyalarına kaydetme
+low_30_percent.to_csv("/Users/lemannur/Desktop/low_30_percent_genes_high.csv", index=False)
+high_30_percent.to_csv("/Users/lemannur/Desktop/high_30_percent_genes_high.csv", index=False)
+
+# Ortadaki %60'lık grup (En düşük ve en yüksek %30'luk grupları çıkardıktan sonra kalanlar)
+low_30_count = int(n * 0.30)
+middle_60_percent = summary_df.sort_values(by='Mean').iloc[low_30_count: -low_30_count]
+middle_60_percent.to_csv("/Users/lemannur/Desktop/middle_60_percent_genes_high.csv", index=False)
+
+
+#######
+# CTNNB1 satırını seçme
+beta_catenin_expression = protein[protein['Gene'] == 'CTNNB1'].iloc[0, 1:]  # Gene sütunundan sonra gelen sütunlar örnek ekspresyonları
+sorted_expression = beta_catenin_expression.sort_values()
+total_samples = len(sorted_expression)
+num_samples_30_percent = int(total_samples * 0.3)
+num_samples_40_percent = int(total_samples * 0.4)
+low_30 = sorted_expression[:num_samples_30_percent].index  # En düşük %30
+
+high_30 = sorted_expression[-num_samples_30_percent:].index  # En yüksek %30
+
+middle_40 = sorted_expression[num_samples_30_percent:-num_samples_30_percent].index  # Ortadaki %40
+
+print("Low %30 indeksleri:", low_30)
+print("High %30 indeksleri:", high_30)
+print("Middle %40 indeksleri:", middle_40)
+
+# Orijinal veriyi bu gruplara göre filtreleme
+low_30_df = protein[['Gene'] + list(low_30)]
+middle_40_df = protein[['Gene'] + list(middle_40)]
+high_30_df = protein[['Gene'] + list(high_30)]
+
+# Özet istatistikleri hesaplama fonksiyonu (low_df için uyarlanmış)
+def calculate_summary_low(df):
+    summary_df = pd.DataFrame()
+    summary_df['Gene'] = df['Gene']
+    summary_df['Mean'] = df.iloc[:, 1:].mean(axis=1)
+    summary_df['Variance'] = df.iloc[:, 1:].var(axis=1)
+    summary_df['Median'] = df.iloc[:, 1:].median(axis=1)
+    summary_df['Max'] = df.iloc[:, 1:].max(axis=1)
+    summary_df['Min'] = df.iloc[:, 1:].min(axis=1)
+    summary_df['Std'] = df.iloc[:, 1:].std(axis=1)
+
+    # Masaüstüne kaydetme
+    summary_df.to_excel("/Users/lemannur/Desktop/proteom_beta_catenin_low_summary.xlsx", index=False)
+
+
+# low_df kullanarak özet istatistikleri hesaplama ve kaydetme
+calculate_summary_low(low_30_df)
+
+
+# Özet istatistikleri hesaplama fonksiyonu (high_30_df için uyarlanmış)
+def calculate_summary_high(df):
+    summary_df = pd.DataFrame()
+    summary_df['Gene'] = df['Gene']
+    summary_df['Mean'] = df.iloc[:, 1:].mean(axis=1)
+    summary_df['Variance'] = df.iloc[:, 1:].var(axis=1)
+    summary_df['Median'] = df.iloc[:, 1:].median(axis=1)
+    summary_df['Max'] = df.iloc[:, 1:].max(axis=1)
+    summary_df['Min'] = df.iloc[:, 1:].min(axis=1)
+    summary_df['Std'] = df.iloc[:, 1:].std(axis=1)
+
+    # Masaüstüne kaydetme
+    summary_df.to_excel("/Users/lemannur/Desktop/proteom_beta_catenin_high_summary.xlsx", index=False)
+
+
+# high_30_df kullanarak özet istatistikleri hesaplama ve kaydetme
+calculate_summary_high(high_30_df)
+
+def calculate_summary_middle(df):
+    summary_df = pd.DataFrame()
+    summary_df['Gene'] = df['Gene']
+    summary_df['Mean'] = df.iloc[:, 1:].mean(axis=1)
+    summary_df['Variance'] = df.iloc[:, 1:].var(axis=1)
+    summary_df['Median'] = df.iloc[:, 1:].median(axis=1)
+    summary_df['Max'] = df.iloc[:, 1:].max(axis=1)
+    summary_df['Min'] = df.iloc[:, 1:].min(axis=1)
+    summary_df['Std'] = df.iloc[:, 1:].std(axis=1)
+
+    # Masaüstüne kaydetme
+    summary_df.to_excel("/Users/lemannur/Desktop/proteom_beta_catenin_middle_summary.xlsx", index=False)
+
+# middle_40_df kullanarak özet istatistikleri hesaplama ve kaydetme
+calculate_summary_middle(middle_40_df)
+
+
+def calculate_summary_middle_save(df):
+    summary_df = pd.DataFrame()
+    summary_df['Gene'] = df['Gene']
+    summary_df['Mean'] = df.iloc[:, 1:].mean(axis=1)
+    summary_df['Variance'] = df.iloc[:, 1:].var(axis=1)
+    summary_df['Median'] = df.iloc[:, 1:].median(axis=1)
+    summary_df['Max'] = df.iloc[:, 1:].max(axis=1)
+    summary_df['Min'] = df.iloc[:, 1:].min(axis=1)
+    summary_df['Std'] = df.iloc[:, 1:].std(axis=1)
+
+    return summary_df
+
+
+# middle_40_df kullanarak özet istatistikleri hesaplama
+summary_40_df = calculate_summary_middle_save(middle_40_df)
+
+def calculate_summary_high_save(df):
+    summary_df = pd.DataFrame()
+    summary_df['Gene'] = df['Gene']
+    summary_df['Mean'] = df.iloc[:, 1:].mean(axis=1)
+    summary_df['Variance'] = df.iloc[:, 1:].var(axis=1)
+    summary_df['Median'] = df.iloc[:, 1:].median(axis=1)
+    summary_df['Max'] = df.iloc[:, 1:].max(axis=1)
+    summary_df['Min'] = df.iloc[:, 1:].min(axis=1)
+    summary_df['Std'] = df.iloc[:, 1:].std(axis=1)
+
+    return summary_df
+
+# high_30_df kullanarak özet istatistikleri hesaplama
+summary_high_30_df = calculate_summary_high_save(high_30_df)
+
+def calculate_summary_low_save(df):
+    summary_df = pd.DataFrame()
+    summary_df['Gene'] = df['Gene']
+    summary_df['Mean'] = df.iloc[:, 1:].mean(axis=1)
+    summary_df['Variance'] = df.iloc[:, 1:].var(axis=1)
+    summary_df['Median'] = df.iloc[:, 1:].median(axis=1)
+    summary_df['Max'] = df.iloc[:, 1:].max(axis=1)
+    summary_df['Min'] = df.iloc[:, 1:].min(axis=1)
+    summary_df['Std'] = df.iloc[:, 1:].std(axis=1)
+
+    return summary_df
+
+# low_30_df kullanarak özet istatistikleri hesaplama
+summary_low_30_df = calculate_summary_low_save(low_30_df)
+
+new_df = pd.DataFrame()
+new_df['Gene'] = scoring['gene']
+
+# Low, Middle ve High için uygun Variance değerlerini ekleme
+new_df['Low'] = new_df['Gene'].map(summary_low_30_df.set_index('Gene')['Variance'])
+new_df['Middle'] = new_df['Gene'].map(summary_40_df.set_index('Gene')['Variance'])
+new_df['High'] = new_df['Gene'].map(summary_high_30_df.set_index('Gene')['Variance'])
+
+new_df
+
+new_df.to_excel("/Users/lemannur/Desktop/gene_variance_summary.xlsx", index=False)
+
+
+# Bölme işlemini gerçekleştirme
+normalized_df = pd.DataFrame()
+normalized_df['Gene'] = scoring['gene']
+
+# Bölme işlemini her bir sütun için uygulama
+normalized_df['Low'] = scoring['low'] / new_df['Low']
+normalized_df['Middle'] = scoring['middle'] / new_df['Middle']
+normalized_df['High'] = scoring['high'] / new_df['High']
+
+# Yeni DataFrame'i masaüstüne kaydetme
+normalized_df.to_excel("/Users/lemannur/Desktop/scoring_normalized_by_variance.xlsx", index=False)
+print(low_30_df.columns.tolist())
+
+cohort_2 = pd.read_excel("/Users/lemannur/Desktop/cohort_2.xlsx")
+
+
+# Step 1: high_30_df içindeki sample isimlerini al (ilk sütun olan 'Gene' hariç)
+high_30_samples = high_30_df.columns[1:]
+
+# Step 2: cohort_2'de bu sample isimlerine göre filtrele
+matching_samples = cohort_2[cohort_2['SampleID'].isin(high_30_samples)]
+
+# Step 3: MSI_status sütunundaki değerlerin sayısını bul
+msi_status_counts = matching_samples['MSI_status'].value_counts()
+
+# Sonucu göster
+print(msi_status_counts)
+# Step 1: middle_40_df içindeki sample isimlerini al (ilk sütun olan 'Gene' hariç)
+middle_40_samples = middle_40_df.columns[1:]
+
+# Step 2: cohort_2'de bu sample isimlerine göre filtrele
+matching_samples_middle = cohort_2[cohort_2['SampleID'].isin(middle_40_samples)]
+
+# Step 3: MSI_status sütunundaki değerlerin sayısını bul
+msi_status_counts_middle = matching_samples_middle['MSI_status'].value_counts()
+
+# Sonucu göster
+print(msi_status_counts_middle)
+
+
+# Step 1: low_30_df içindeki sample isimlerini al (ilk sütun olan 'Gene' hariç)
+low_30_samples = low_30_df.columns[1:]
+
+# Step 2: cohort_2'de bu sample isimlerine göre filtrele
+matching_samples_low = cohort_2[cohort_2['SampleID'].isin(low_30_samples)]
+
+# Step 3: MSI_status sütunundaki değerlerin sayısını bul
+msi_status_counts_low = matching_samples_low['MSI_status'].value_counts()
+
+# Sonucu göster
+print(msi_status_counts_low)
