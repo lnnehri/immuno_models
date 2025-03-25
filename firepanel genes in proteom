@@ -1,0 +1,340 @@
+import pandas as pd
+import os
+
+# Masaüstü yolu
+desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+
+# Dosya yolu
+file_path = os.path.join(desktop_path, "proteom_general.csv")
+
+# CSV dosyasını oku
+df = pd.read_csv(file_path)
+
+# İlk birkaç satırı göster
+print(df.head())
+import pandas as pd
+import os
+
+# Masaüstü yolu
+desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+
+# Excel dosya yolu
+file_path = os.path.join(desktop_path, "proteom_general.xlsx")
+
+# Excel dosyasını oku
+df = pd.read_excel(file_path)
+
+# İlk birkaç satırı göster
+print(df.head())
+import pandas as pd
+
+# İstediğin kolonlar (önceden scale edilenler)
+columns_to_select = [
+    'L2T', 'L4T', 'L16T', 'L22T', 'L31T', 'L43T', 'L71T', 'L73T', 'L74T',
+    'L76T', 'L80T', 'L83T', 'L89T', 'L96T', 'L102T', 'L103T', 'L107T', 'L110T',
+    'L111T', 'L115T', 'L147T', 'L153T', 'L154T', 'L155T', 'L158T',
+    'CRC1T', 'CRC5T', 'CRC6T', 'CRC18T', 'CRC22T', 'CRC29T', 'CRC36T',
+    'CRC37T', 'CRC42T', 'CRC47T', 'CRC48T', 'CRC54T', 'CRC55T', 'CRC67T',
+    'CRC70T', 'CRC72T', 'CRC74T', 'CRC75T', 'CRC76T', 'CRC90T', 'CRC100T',
+    'CRC106T', 'CRC112T', 'CRC113T', 'CRC120T', 'CRC122T', 'CRC124T'
+]
+
+# Yeni dataframe: sadece Gene kolonuyla birlikte yukarıdaki kolonları seç
+df_P1M1 = df[['Gene'] + columns_to_select].copy()
+
+# Kontrol için ilk birkaç satırı yazdır
+print(df_P1M1.head())
+# Varyans hesapla (axis=1 → satır bazında, yani her gen için)
+df_P1M1['Variance'] = df_P1M1.iloc[:, 1:].var(axis=1)
+
+# Standart sapma hesapla
+df_P1M1['Std_Dev'] = df_P1M1.iloc[:, 1:-1].std(axis=1)  # Sondaki 'Variance' dahil olmasın diye -1 dedik
+
+# Sonuçları kontrol et
+print(df_P1M1[['Gene', 'Variance', 'Std_Dev']].head())
+# Varyans hesapla
+df_P2M2['Variance'] = df_P2M2.iloc[:, 1:].var(axis=1)
+
+# Standart sapma hesapla
+df_P2M2['Std_Dev'] = df_P2M2.iloc[:, 1:-1].std(axis=1)  # Sondaki 'Variance' dahil olmasın diye -1 dedik
+
+# Kontrol için ilk 5 satırı yazdır
+print(df_P2M2[['Gene', 'Variance', 'Std_Dev']].head())
+# Ortalama ekspresyonu hesapla
+df_P1M1['Mean'] = df_P1M1.iloc[:, 1:-2].mean(axis=1)  # Sonda zaten 'Variance' ve 'Std_Dev' var
+
+# Kontrol için ilk birkaç satırı yazdır
+print(df_P1M1[['Gene', 'Mean', 'Variance', 'Std_Dev']].head())
+# Ortalama ekspresyonu hesapla
+df_P2M2['Mean'] = df_P2M2.iloc[:, 1:-2].mean(axis=1)
+
+# Kontrol için ilk birkaç satırı yazdır
+print(df_P2M2[['Gene', 'Mean', 'Variance', 'Std_Dev']].head())
+
+fire_panel_genes = [
+    'PARP1', 'PRKDC', 'XRCC4', 'UBE2A', 'HMGB1', 'RPA3', 'ATM', 'CETN2', 'CUL5', 'GTF2H5',
+    'MGMT', 'MPLKIP', 'NABP2', 'NSMCE1', 'NSMCE2', 'NUDT1', 'POLE4', 'RAD23A', 'TCEA1',
+    'UBE2B', 'UBE2V2', 'SOX4', 'YWHAB', 'SMARCC1', 'EIF2A', 'GTF2F2', 'DKC1', 'DDX10',
+    'UBA2', 'STAG2', 'HDAC2', 'TIPRL', 'H1F0', 'NHP2', 'SMC3', 'TFPT', 'CDKN2A',
+    'CDK4', 'COPS5', 'YAP1', 'TERF2', 'TERT'
+]
+df_fire_P1M1 = df_P1M1[df_P1M1['Gene'].isin(fire_panel_genes)]
+# P2M2 içerisinden fire panel genlerini filtrele
+df_fire_P2M2 = df_P2M2[df_P2M2['Gene'].isin(fire_panel_genes)].copy()
+
+# Kontrol için ilk birkaç satır
+print(df_fire_P2M2.head())
+
+print(df_P1M1['Std_Dev'].describe())
+print(df_P2M2['Std_Dev'].describe())
+print(df_fire_P2M2['Std_Dev'].describe())
+print(df_fire_P1M1['Std_Dev'].describe())
+
+import pandas as pd
+import os
+
+# Masaüstü yolu
+desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+
+# Dosya yolları
+file_path_P1M1 = os.path.join(desktop_path, "fire_panel_P1M1.xlsx")
+file_path_P2M2 = os.path.join(desktop_path, "fire_panel_P2M2.xlsx")
+
+# Excel'e yazdır
+df_fire_P1M1.to_excel(file_path_P1M1, index=False)
+df_fire_P2M2.to_excel(file_path_P2M2, index=False)
+
+print("Dosyalar başarıyla masaüstüne yazdırıldı.")
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Ortak genler – karşılaştırma için kesişim almak mantıklı
+common_genes = set(df_fire_P1M1['Gene']).intersection(df_fire_P2M2['Gene'])
+
+# Ortak genlere göre iki dataframe’i filtrele
+df1 = df_fire_P1M1[df_fire_P1M1['Gene'].isin(common_genes)].set_index('Gene')
+df2 = df_fire_P2M2[df_fire_P2M2['Gene'].isin(common_genes)].set_index('Gene')
+
+# Scatter plot – std karşılaştırması
+plt.figure(figsize=(8,6))
+plt.scatter(df1['Std_Dev'], df2['Std_Dev'], alpha=0.7)
+plt.plot([0, max(df1['Std_Dev'].max(), df2['Std_Dev'].max())], [0, max(df1['Std_Dev'].max(), df2['Std_Dev'].max())], 'r--')
+plt.xlabel("Standard Deviation - P1M1")
+plt.ylabel("Standard Deviation - P2M2")
+plt.title("Fire Panel Genleri: Std Deviation Karşılaştırması")
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+plt.figure(figsize=(8,5))
+sns.histplot(df_fire_P1M1['Std_Dev'], color='blue', label='P1M1', kde=True, stat='density', alpha=0.5)
+sns.histplot(df_fire_P2M2['Std_Dev'], color='green', label='P2M2', kde=True, stat='density', alpha=0.5)
+plt.xlabel("Standard Deviation")
+plt.title("Std Deviation Dağılımı: P1M1 vs P2M2")
+plt.legend()
+plt.tight_layout()
+plt.show()
+import matplotlib.pyplot as plt
+
+# Ortak genleri filtrele
+common_genes = set(df_fire_P1M1['Gene']).intersection(df_fire_P2M2['Gene'])
+
+# Ortak genlere göre filtreleme ve indeksleme
+df1 = df_fire_P1M1[df_fire_P1M1['Gene'].isin(common_genes)].set_index('Gene')
+df2 = df_fire_P2M2[df_fire_P2M2['Gene'].isin(common_genes)].set_index('Gene')
+
+# Scatter plot için: her genin ortalama ekspresyonu
+mean_P1M1 = df1.drop(columns=['Variance', 'Std_Dev', 'Mean'], errors='ignore').mean(axis=1)
+mean_P2M2 = df2.drop(columns=['Variance', 'Std_Dev', 'Mean'], errors='ignore').mean(axis=1)
+
+plt.figure(figsize=(8,6))
+plt.scatter(mean_P1M1, mean_P2M2, alpha=0.8)
+plt.plot([min(mean_P1M1.min(), mean_P2M2.min()), max(mean_P1M1.max(), mean_P2M2.max())],
+         [min(mean_P1M1.min(), mean_P2M2.min()), max(mean_P1M1.max(), mean_P2M2.max())],
+         'r--', label='y=x')
+
+plt.xlabel('Mean Expression (P1M1)')
+plt.ylabel('Mean Expression (P2M2)')
+plt.title('Gene Expression Comparison: P1M1 vs P2M2')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+import pandas as pd
+from scipy.stats import ttest_ind
+import numpy as np
+
+# Ortak genleri al
+common_genes = set(df_fire_P1M1['Gene']).intersection(df_fire_P2M2['Gene'])
+
+# Gen isimlerini index olarak ayarlayıp sadece ekspresyon kolonlarını al
+df1 = df_fire_P1M1[df_fire_P1M1['Gene'].isin(common_genes)].set_index('Gene')
+df2 = df_fire_P2M2[df_fire_P2M2['Gene'].isin(common_genes)].set_index('Gene')
+
+# Varyans, std, mean gibi kolonları dışarıda bırak
+expr_P1M1 = df1.drop(columns=['Variance', 'Std_Dev', 'Mean'], errors='ignore')
+expr_P2M2 = df2.drop(columns=['Variance', 'Std_Dev', 'Mean'], errors='ignore')
+
+# Sonuçları tutmak için boş liste
+results = []
+
+for gene in expr_P1M1.index:
+    group1 = expr_P1M1.loc[gene].values
+    group2 = expr_P2M2.loc[gene].values
+
+    # Log2 Fold Change
+    mean1 = np.mean(group1)
+    mean2 = np.mean(group2)
+    log2fc = np.log2(mean2 + 1e-5) - np.log2(mean1 + 1e-5)  # küçük değerle sıfırdan kaçın
+
+    # t-test
+    _, pval = ttest_ind(group1, group2, equal_var=False)
+
+    results.append({
+        'Gene': gene,
+        'Log2FC': log2fc,
+        'P_Value': pval
+    })
+
+# Sonuçları dataframe'e çevir
+df_diff_expr = pd.DataFrame(results)
+
+print(df_diff_expr.sort_values(by='P_Value').head())
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+# Volcano plot için –log10(p-value) sütunu ekle
+df_diff_expr['-log10_P'] = -np.log10(df_diff_expr['P_Value'])
+
+# Renkleri kategorize et (örneğin |log2FC| > 1 ve p < 0.05 olanları vurgula)
+def label_gene(row):
+    if row['P_Value'] < 0.05 and abs(row['Log2FC']) > 1:
+        return 'Significant'
+    else:
+        return 'Not Significant'
+
+df_diff_expr['Significance'] = df_diff_expr.apply(label_gene, axis=1)
+
+# Volcano plot çiz
+plt.figure(figsize=(10,6))
+sns.scatterplot(data=df_diff_expr, x='Log2FC', y='-log10_P', hue='Significance',
+                palette={'Significant': 'red', 'Not Significant': 'gray'}, alpha=0.7)
+
+plt.axhline(-np.log10(0.05), linestyle='--', color='black', linewidth=1)
+plt.axvline(1, linestyle='--', color='blue', linewidth=1)
+plt.axvline(-1, linestyle='--', color='blue', linewidth=1)
+
+plt.title("Volcano Plot: P1M1 vs P2M2")
+plt.xlabel("Log2 Fold Change (P2M2 vs P1M1)")
+plt.ylabel("-log10(p-value)")
+plt.legend(title='Significance')
+plt.tight_layout()
+plt.show()
+
+def label_gene(row):
+    if row['P_Value'] < 0.05 and abs(row['Log2FC']) > 0.5:
+        return 'Significant'
+    else:
+        return 'Not Significant'
+
+
+df_diff_expr_sorted = df_diff_expr.sort_values(by='P_Value')
+print(df_diff_expr_sorted.head(10))  # en anlamlı 10 gen
+top_up = df_diff_expr.sort_values(by='Log2FC', ascending=False).head(10)
+top_down = df_diff_expr.sort_values(by='Log2FC').head(10)
+
+print("Top 10 Upregulated in P2M2:")
+print(top_up[['Gene', 'Log2FC', 'P_Value']])
+
+print("\nTop 10 Downregulated in P2M2:")
+print(top_down[['Gene', 'Log2FC', 'P_Value']])
+
+# En çok artan genler (P2M2 > P1M1)
+top_up = df_diff_expr.sort_values(by='Log2FC', ascending=False).head(10)
+
+# En çok azalan genler (P2M2 < P1M1)
+top_down = df_diff_expr.sort_values(by='Log2FC').head(10)
+
+print("🔺 Top 10 Upregulated in P2M2:")
+print(top_up[['Gene', 'Log2FC', 'P_Value']])
+
+print("\n🔻 Top 10 Downregulated in P2M2:")
+print(top_down[['Gene', 'Log2FC', 'P_Value']])
+
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Örnek gen adı
+gene_name = top_up.iloc[0]['Gene']
+
+# Genin ifadeleri
+exp_P1M1 = df1.loc[gene_name].drop(['Variance', 'Std_Dev', 'Mean'], errors='ignore')
+exp_P2M2 = df2.loc[gene_name].drop(['Variance', 'Std_Dev', 'Mean'], errors='ignore')
+
+# Veriyi uzun formata getirelim
+df_gene = pd.DataFrame({
+    'Expression': list(exp_P1M1.values) + list(exp_P2M2.values),
+    'Group': ['P1M1']*len(exp_P1M1) + ['P2M2']*len(exp_P2M2)
+})
+
+# Boxplot çizimi
+plt.figure(figsize=(6,5))
+sns.boxplot(data=df_gene, x='Group', y='Expression')
+sns.stripplot(data=df_gene, x='Group', y='Expression', color='black', alpha=0.5)
+plt.title(f"{gene_name} Expression in P1M1 vs P2M2")
+plt.tight_layout()
+plt.show()
+
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# İlk 5 up ve down genlerin isimleri
+top10_genes = list(top_up['Gene'].head(5)) + list(top_down['Gene'].head(5))
+# Gen isimlerini index olarak kullanan df1 (P1M1) ve df2 (P2M2) vardı zaten
+# Gerekli genler ve sadece örnek kolonları (istatistik kolonlar hariç)
+genes_expr_P1M1 = df1.loc[top10_genes].drop(columns=['Variance', 'Std_Dev', 'Mean'], errors='ignore')
+genes_expr_P2M2 = df2.loc[top10_genes].drop(columns=['Variance', 'Std_Dev', 'Mean'], errors='ignore')
+
+# Örnek isimlerinin hangi gruba ait olduğunu gösteren etiket listesi
+group_labels = ['P1M1'] * genes_expr_P1M1.shape[1] + ['P2M2'] * genes_expr_P2M2.shape[1]
+
+# İki grubu birleştir
+combined_expr = pd.concat([genes_expr_P1M1, genes_expr_P2M2], axis=1)
+
+# Renkli gruplama için örnek grubu etiketi DataFrame
+col_colors = pd.DataFrame({'Group': group_labels}, index=combined_expr.columns)
+col_colors['Group'] = col_colors['Group'].map({'P1M1': 'skyblue', 'P2M2': 'lightcoral'})
+
+# Heatmap çiz
+sns.clustermap(combined_expr, col_colors=col_colors, cmap='vlag', figsize=(12, 6),
+               xticklabels=False, yticklabels=True, standard_scale=0)
+
+plt.suptitle("Top 10 Differentially Expressed Genes (P1M1 vs P2M2)", y=1.02)
+plt.show()
+
+# diff expr df'de Gene sütunu var, onu index yapalım
+df_diff_expr_indexed = df_diff_expr.set_index('Gene')
+
+# df_fire_P1M1'e ekle
+df_fire_P1M1_updated = df_fire_P1M1.set_index('Gene').copy()
+df_fire_P1M1_updated[['Log2FC', 'P_Value']] = df_diff_expr_indexed[['Log2FC', 'P_Value']]
+
+# df_fire_P2M2'ye ekle
+df_fire_P2M2_updated = df_fire_P2M2.set_index('Gene').copy()
+df_fire_P2M2_updated[['Log2FC', 'P_Value']] = df_diff_expr_indexed[['Log2FC', 'P_Value']]
+
+import os
+
+# Masaüstü yolu
+desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+
+# Dosya yolları
+file_path_P1M1 = os.path.join(desktop_path, "fire_panel_P1M1_with_stats.xlsx")
+file_path_P2M2 = os.path.join(desktop_path, "fire_panel_P2M2_with_stats.xlsx")
+
+# Excel'e yaz
+df_fire_P1M1_updated.reset_index().to_excel(file_path_P1M1, index=False)
+df_fire_P2M2_updated.reset_index().to_excel(file_path_P2M2, index=False)
+
+print("Excel dosyaları başarıyla masaüstüne kaydedildi.")
